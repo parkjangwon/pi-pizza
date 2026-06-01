@@ -1,0 +1,35 @@
+{
+  "name": "pi-pizza",
+  "version": "0.1.0",
+  "description": "Pizza mascot and multi-provider auto-router for pi.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pizza",
+    "router"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/index.ts"
+    ]
+  },
+  "dependencies": {
+    "chalk": "5.6.2"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.78.0",
+    "@earendil-works/pi-coding-agent": "0.78.0",
+    "typescript": "5.9.3",
+    "typebox": "1.0.63"
+  }
+}
