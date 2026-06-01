@@ -20,12 +20,14 @@ The package keeps `pi` itself unmodified. Install it as an extension package, th
 
 ## Install
 
-From npm:
+Install the published npm package:
 
 ```bash
 pi install npm:pi-pizza
 pi
 ```
+
+After the first run, plain `pi` uses `pizza/auto` by default.
 
 From a local checkout:
 
