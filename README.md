@@ -1,5 +1,7 @@
 # pi-pizza
 
+<img width="866" height="524" alt="Screenshot 2026-06-01 at 15-20-01 —" src="https://github.com/user-attachments/assets/3a90ac9f-2dc9-48a7-ba92-25ab3588361e" />
+
 `pi-pizza` is a stock `pi` package that adds the Pizza startup mascot and a `pizza/auto` model provider.
 
 The package keeps `pi` itself unmodified. Install it as an extension package, then use the `pizza/auto` model to route each turn to a task-appropriate provider/model.
