@@ -83,6 +83,45 @@ On first load, `pi-pizza` creates `~/.pi/agent/pizza.json`:
 
 Leave a field blank for auto-detection, or set a concrete `provider/model-id`.
 
+### Roles
+
+`pi-pizza` uses six model roles. You can leave all roles blank and let the extension choose from authenticated models, or pin individual roles when you want stronger cost/latency/quality control.
+
+| Role | What it does | Good fit |
+| --- | --- | --- |
+| `plannerModel` | Classifies the user request by difficulty and domain before routing. | Fast, cheap, reliable instruction-following model. Use a mini/chat model. |
+| `readerModel` | Reads high-context prompts and also performs the routing classification call. | Cheap long-context model. Gemini Flash-style models are a good fit. |
+| `builderEasyModel` | Handles simple edits, small commands, light explanations, and routine tasks. | Low-cost fast model. Prefer cheap coding-capable chat models. |
+| `builderHardBackendModel` | Handles complex backend logic, algorithms, TypeScript errors, and system refactors. | Strong coding/reasoning model. Prefer Sonnet/GPT/Codex/DeepSeek-style reasoning models. |
+| `builderHardFrontendModel` | Handles UI component structure, CSS/layout details, and visual frontend work. | Strong frontend-writing model. Claude Sonnet-style models are a good fit. |
+| `executorModel` | Handles post-tool execution turns and command-output diagnosis. | Very low-latency model. Prefer fast chat models that are good at concise debugging. |
+
+### Model Suggestions
+
+Use model IDs that appear in your own `pi --list-models` output. Exact model IDs change over time, so treat these as examples:
+
+| Goal | Example choices |
+| --- | --- |
+| Best quality | `anthropic/claude-sonnet-4-5`, `openai/gpt-5.2`, `openai/gpt-5.2-codex` |
+| Cost-effective general routing | `deepseek/deepseek-chat`, `openai/gpt-5-mini`, `google/gemini-2.5-flash` |
+| Long-context reading | `google/gemini-2.5-flash`, `google/gemini-2.5-pro` |
+| Backend-heavy coding | `anthropic/claude-sonnet-4-5`, `openai/gpt-5.2-codex`, `deepseek/deepseek-coder` |
+| Frontend-heavy coding | `anthropic/claude-sonnet-4-5`, `google/gemini-2.5-pro`, `openai/gpt-5.2` |
+| Fast execution diagnosis | `groq/*`, `deepseek/deepseek-chat`, `openai/gpt-5-nano` |
+
+The safest starting point is to set only the hard builder roles and leave the cheap/fast roles blank:
+
+```json
+{
+  "plannerModel": "",
+  "readerModel": "",
+  "builderEasyModel": "",
+  "builderHardBackendModel": "anthropic/claude-sonnet-4-5",
+  "builderHardFrontendModel": "anthropic/claude-sonnet-4-5",
+  "executorModel": ""
+}
+```
+
 Example:
 
 ```json
