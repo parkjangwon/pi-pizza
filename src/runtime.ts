@@ -14,9 +14,16 @@ import { PizzaRuntimeError } from "./errors.ts";
 import { selectModel } from "./router.ts";
 import type { ModelLookup, PizzaResolvedConfig } from "./types.ts";
 
+export interface RouteEntry {
+	readonly timestamp: number;
+	readonly label: string;
+	readonly model: string;
+}
+
 export class PizzaRuntime {
   private modelLookup: ModelLookup | undefined;
   private config: PizzaResolvedConfig | undefined;
+  private routeHistory: RouteEntry[] = [];
 
   bind(modelLookup: ModelLookup): void {
     this.modelLookup = modelLookup;
@@ -58,6 +65,7 @@ export class PizzaRuntime {
       formatRole("builderHardBackendModel", config.builderHardBackendModel),
       formatRole("builderHardFrontendModel", config.builderHardFrontendModel),
       formatRole("executorModel", config.executorModel),
+      formatRole("architectModel", config.architectModel),
     ].join("\n");
   }
 
@@ -78,8 +86,16 @@ export class PizzaRuntime {
 			if (!hasConcreteModels(config)) {
 				throw new PizzaRuntimeError("No authenticated non-pizza models are available for routing.");
 			}
+
 			const routed = await selectModel(config, modelLookup, context);
-      process.stderr.write(`[pizza] 🍕 Routing to ${routed.label}: ${routed.model.provider}/${routed.model.id}\n`);
+			const entry: RouteEntry = {
+				timestamp: Date.now(),
+				label: routed.label,
+				model: `${routed.model.provider}/${routed.model.id}`,
+			};
+			this.routeHistory.push(entry);
+			if (this.routeHistory.length > 10) this.routeHistory.shift();
+			process.stderr.write(`[pizza] 🍕 Routing to ${entry.label}: ${entry.model}\n`);
 
       const auth = await modelLookup.getApiKeyAndHeaders(routed.model);
       if (!auth.ok) {
@@ -95,6 +111,22 @@ export class PizzaRuntime {
       output.push({ type: "error", reason: "error", error: createErrorMessage(error) });
       output.end();
     }
+  }
+
+  getLastRoute(): string {
+    if (this.routeHistory.length === 0) {
+      return "No routing has occurred yet.";
+    }
+    return this.routeHistory
+      .map(
+        (r) =>
+          `[${new Date(r.timestamp).toLocaleTimeString()}] 🍕 ${r.label}: ${r.model}`,
+      )
+      .join("\n");
+  }
+
+  getRouteHistory(): RouteEntry[] {
+    return [...this.routeHistory];
   }
 
   private requireModelLookup(): ModelLookup {
@@ -135,6 +167,7 @@ function hasConcreteModels(config: PizzaResolvedConfig): boolean {
 		config.builderHardBackendModel,
 		config.builderHardFrontendModel,
 		config.executorModel,
+		config.architectModel,
 	].some((model) => model.provider !== "pizza");
 }
 

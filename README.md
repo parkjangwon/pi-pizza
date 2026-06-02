@@ -77,7 +77,8 @@ On first load, `pi-pizza` creates `~/.pi/agent/pizza.json`:
   "builderEasyModel": "",
   "builderHardBackendModel": "",
   "builderHardFrontendModel": "",
-  "executorModel": ""
+  "executorModel": "",
+  "architectModel": ""
 }
 ```
 
@@ -85,7 +86,7 @@ Leave a field blank for auto-detection, or set a concrete `provider/model-id`.
 
 ### Roles
 
-`pi-pizza` uses six model roles. You can leave all roles blank and let the extension choose from authenticated models, or pin individual roles when you want stronger cost/latency/quality control.
+`pi-pizza` uses seven model roles. You can leave all roles blank and let the extension choose from authenticated models, or pin individual roles when you want stronger cost/latency/quality control.
 
 | Role | What it does | Good fit |
 | --- | --- | --- |
@@ -95,6 +96,7 @@ Leave a field blank for auto-detection, or set a concrete `provider/model-id`.
 | `builderHardBackendModel` | Handles complex backend logic, algorithms, TypeScript errors, and system refactors. | Strong coding/reasoning model. Prefer Sonnet/GPT/Codex/DeepSeek-style reasoning models. |
 | `builderHardFrontendModel` | Handles UI component structure, CSS/layout details, and visual frontend work. | Strong frontend-writing model. Claude Sonnet-style models are a good fit. |
 | `executorModel` | Handles post-tool execution turns and command-output diagnosis. | Very low-latency model. Prefer fast chat models that are good at concise debugging. |
+| `architectModel` | Handles planning, architecture design, and high-level design work. Activated on `/plan`, `/skill:plan`, `/skill:ralplan`, `/skill:writing-plans`, or `/skill:executing-plans`. Does not execute code. | Strongest reasoning model available. Prefer Opus/Sonnet/GPT-5/DeepSeek-Coder — anything with top-tier reasoning for complex design decisions. |
 
 ### Model Suggestions
 
@@ -109,7 +111,7 @@ Use model IDs that appear in your own `pi --list-models` output. Exact model IDs
 | Frontend-heavy coding | `anthropic/claude-sonnet-4-5`, `google/gemini-2.5-pro`, `openai/gpt-5.2` |
 | Fast execution diagnosis | `groq/*`, `deepseek/deepseek-chat`, `openai/gpt-5-nano` |
 
-The safest starting point is to set only the hard builder roles and leave the cheap/fast roles blank:
+The safest starting point is to set only the architect and hard builder roles and leave the cheap/fast roles blank:
 
 ```json
 {
@@ -118,7 +120,8 @@ The safest starting point is to set only the hard builder roles and leave the ch
   "builderEasyModel": "",
   "builderHardBackendModel": "anthropic/claude-sonnet-4-5",
   "builderHardFrontendModel": "anthropic/claude-sonnet-4-5",
-  "executorModel": ""
+  "executorModel": "",
+  "architectModel": "anthropic/claude-sonnet-4-5"
 }
 ```
 
@@ -131,7 +134,8 @@ Example:
   "builderEasyModel": "opencode-go/deepseek-v4-pro",
   "builderHardBackendModel": "anthropic/claude-sonnet-4-5",
   "builderHardFrontendModel": "anthropic/claude-sonnet-4-5",
-  "executorModel": "groq/llama-3.3-70b-versatile"
+  "executorModel": "groq/llama-3.3-70b-versatile",
+  "architectModel": "anthropic/claude-sonnet-4-5"
 }
 ```
 

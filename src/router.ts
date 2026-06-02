@@ -1,69 +1,154 @@
-import { completeSimple, type Api, type Context, type Message, type Model } from "@earendil-works/pi-ai";
-import type { ModelLookup, PizzaDecision, PizzaResolvedConfig } from "./types.ts";
+import {
+	completeSimple,
+	type Api,
+	type Context,
+	type Message,
+	type Model,
+} from "@earendil-works/pi-ai";
+import type {
+	ModelLookup,
+	PizzaDecision,
+	PizzaResolvedConfig,
+} from "./types.ts";
 
 let lastClassifiedPrompt = "";
 let lastDecision: PizzaDecision | undefined;
 
 export async function selectModel(
-  config: PizzaResolvedConfig,
-  modelLookup: ModelLookup,
-  context: Context,
+	config: PizzaResolvedConfig,
+	modelLookup: ModelLookup,
+	context: Context,
 ): Promise<{ readonly model: Model<Api>; readonly label: string }> {
-  const lastMessage = context.messages[context.messages.length - 1];
-  const userPrompt = getLastUserMessageText(context.messages);
-  const isExecuting =
-    lastMessage?.role === "toolResult" ||
-    (lastMessage?.role === "assistant" && lastMessage.content.some((content) => content.type === "toolCall"));
+	const lastMessage = context.messages[context.messages.length - 1];
+	const userPrompt = getLastUserMessageText(context.messages);
+	const isExecuting =
+		lastMessage?.role === "toolResult" ||
+		(lastMessage?.role === "assistant" &&
+			lastMessage.content.some((content) => content.type === "toolCall"));
 
-  if (isExecuting) {
-    return { model: config.executorModel, label: "CommandExecutor" };
-  }
-  if (!userPrompt) {
-    return { model: config.builderEasyModel, label: "CodeBuilder [Easy / GENERAL]" };
-  }
+	if (isExecuting) {
+		return { model: config.executorModel, label: "CommandExecutor" };
+	}
+	if (!userPrompt) {
+		return {
+			model: config.builderEasyModel,
+			label: "CodeBuilder [Easy / GENERAL]",
+		};
+	}
 
-  const decision = await classifyIntent(config.readerModel, modelLookup, userPrompt);
-  if (decision.difficulty === "EASY") {
-    return { model: config.builderEasyModel, label: `CodeBuilder [Easy / ${decision.domain}]` };
-  }
-  if (decision.domain === "FRONTEND") {
-    return { model: config.builderHardFrontendModel, label: "CodeBuilder [Hard / Frontend]" };
-  }
-  return { model: config.builderHardBackendModel, label: `CodeBuilder [Hard / ${decision.domain}]` };
+	if (isPlanningRequest(context, userPrompt)) {
+		return { model: config.architectModel, label: "Architect [Plan / Design]" };
+	}
+
+	const decision = await classifyIntent(
+		config.readerModel,
+		modelLookup,
+		userPrompt,
+	);
+	if (decision.difficulty === "EASY") {
+		return {
+			model: config.builderEasyModel,
+			label: `CodeBuilder [Easy / ${decision.domain}]`,
+		};
+	}
+	if (decision.domain === "FRONTEND") {
+		return {
+			model: config.builderHardFrontendModel,
+			label: "CodeBuilder [Hard / Frontend]",
+		};
+	}
+	return {
+		model: config.builderHardBackendModel,
+		label: `CodeBuilder [Hard / ${decision.domain}]`,
+	};
+}
+
+export function isPlanningRequest(
+	context: Context,
+	userPrompt: string,
+): boolean {
+	const planSkills = ["plan", "ralplan", "writing-plans", "executing-plans"];
+
+	const hasPlanSkillMarker = (text: string): boolean =>
+		planSkills.some(
+			(name) =>
+				// Old format: <skill name="ralplan" attribute-style (inline in SKILL.md header)
+				text.includes(`<skill name="${name}"`) ||
+				// New format: <name>ralplan</name> element-style (pi's formatSkillsForPrompt output)
+				text.includes(`<name>${name}</name>`),
+		);
+
+	// Check ALL messages (user, system, assistant) for skill injection
+	for (const msg of context.messages) {
+		const text =
+			typeof msg.content === "string"
+				? msg.content
+				: msg.content
+						.filter((c) => c.type === "text")
+						.map((c) => c.text)
+						.join("\n");
+		if (hasPlanSkillMarker(text)) return true;
+	}
+
+	// Check system prompt for skill injection (alternative pi behavior)
+	if (hasPlanSkillMarker(context.systemPrompt ?? "")) return true;
+
+	// Direct prefix match on the last user prompt (/plan, /skill:plan)
+	const lower = userPrompt.toLowerCase();
+	if (
+		/^\s*\/plan\b/.test(lower) ||
+		/^\s*\/skill:(plan|ralplan|writing-plans|executing-plans)\b/.test(lower)
+	) {
+		return true;
+	}
+
+	return false;
 }
 
 function getLastUserMessageText(messages: readonly Message[]): string {
-  const lastUser = [...messages].reverse().find((message) => message.role === "user");
-  if (!lastUser) return "";
-  if (typeof lastUser.content === "string") return lastUser.content;
-  return lastUser.content
-    .filter((content) => content.type === "text")
-    .map((content) => content.text)
-    .join("\n");
+	const lastUser = [...messages]
+		.reverse()
+		.find((message) => message.role === "user");
+	if (!lastUser) return "";
+	if (typeof lastUser.content === "string") return lastUser.content;
+	return lastUser.content
+		.filter((content) => content.type === "text")
+		.map((content) => content.text)
+		.join("\n");
 }
 
-async function classifyIntent(model: Model<Api>, modelLookup: ModelLookup, userPrompt: string): Promise<PizzaDecision> {
-  if (lastClassifiedPrompt === userPrompt && lastDecision) {
-    return lastDecision;
-  }
+async function classifyIntent(
+	model: Model<Api>,
+	modelLookup: ModelLookup,
+	userPrompt: string,
+): Promise<PizzaDecision> {
+	if (lastClassifiedPrompt === userPrompt && lastDecision) {
+		return lastDecision;
+	}
 
 	const auth = await modelLookup.getApiKeyAndHeaders(model);
 	const message = await completeSimple(
 		model,
 		{
-			messages: [{ role: "user", content: buildClassificationPrompt(userPrompt), timestamp: Date.now() }],
+			messages: [
+				{
+					role: "user",
+					content: buildClassificationPrompt(userPrompt),
+					timestamp: Date.now(),
+				},
+			],
 		},
 		auth.ok ? buildAuthOptions(auth) : undefined,
 	);
-  const text = message.content
-    .filter((content) => content.type === "text")
-    .map((content) => content.text)
-    .join("\n");
-  const decision = parseDecision(text);
+	const text = message.content
+		.filter((content) => content.type === "text")
+		.map((content) => content.text)
+		.join("\n");
+	const decision = parseDecision(text);
 
-  lastClassifiedPrompt = userPrompt;
-  lastDecision = decision;
-  return decision;
+	lastClassifiedPrompt = userPrompt;
+	lastDecision = decision;
+	return decision;
 }
 
 function parseDecision(text: string): PizzaDecision {
@@ -78,14 +163,18 @@ function parseDecision(text: string): PizzaDecision {
 		}
 		throw error;
 	}
-	if (!isDecisionPayload(parsed)) return { difficulty: "EASY", domain: "GENERAL" };
+	if (!isDecisionPayload(parsed))
+		return { difficulty: "EASY", domain: "GENERAL" };
 	return {
 		difficulty: parsed.difficulty,
 		domain: parsed.domain,
 	};
 }
 
-function buildAuthOptions(auth: { readonly apiKey?: string; readonly headers?: Record<string, string> }): {
+function buildAuthOptions(auth: {
+	readonly apiKey?: string;
+	readonly headers?: Record<string, string>;
+}): {
 	readonly apiKey?: string;
 	readonly headers?: Record<string, string>;
 } {
@@ -96,16 +185,18 @@ function buildAuthOptions(auth: { readonly apiKey?: string; readonly headers?: R
 }
 
 function isDecisionPayload(value: unknown): value is PizzaDecision {
-  if (!value || typeof value !== "object") return false;
-  if (!("difficulty" in value) || !("domain" in value)) return false;
-  return (
-    (value.difficulty === "EASY" || value.difficulty === "HARD") &&
-    (value.domain === "FRONTEND" || value.domain === "BACKEND" || value.domain === "GENERAL")
-  );
+	if (!value || typeof value !== "object") return false;
+	if (!("difficulty" in value) || !("domain" in value)) return false;
+	return (
+		(value.difficulty === "EASY" || value.difficulty === "HARD") &&
+		(value.domain === "FRONTEND" ||
+			value.domain === "BACKEND" ||
+			value.domain === "GENERAL")
+	);
 }
 
 function buildClassificationPrompt(userPrompt: string): string {
-  return `You are the TaskPlanner for pi-pizza, a multi-provider coding-agent router.
+	return `You are the TaskPlanner for pi-pizza, a multi-provider coding-agent router.
 Classify the user's request.
 
 Difficulty:
