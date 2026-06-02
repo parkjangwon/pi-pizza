@@ -12,12 +12,14 @@ import type { ProviderConfig } from "@earendil-works/pi-coding-agent";
 import { resolveConfig } from "./config.ts";
 import { PizzaRuntimeError } from "./errors.ts";
 import { selectModel } from "./router.ts";
-import type { ModelLookup, PizzaResolvedConfig } from "./types.ts";
+import type { ModelLookup, PizzaCategory, PizzaResolvedConfig } from "./types.ts";
 
 export interface RouteEntry {
 	readonly timestamp: number;
+	readonly category: PizzaCategory;
 	readonly label: string;
 	readonly model: string;
+	readonly reason: string;
 }
 
 export class PizzaRuntime {
@@ -59,13 +61,24 @@ export class PizzaRuntime {
   describeModels(): string {
     const config = this.requireConfig();
     return [
-      formatRole("plannerModel", config.plannerModel),
-      formatRole("readerModel", config.readerModel),
-      formatRole("builderEasyModel", config.builderEasyModel),
-      formatRole("builderHardBackendModel", config.builderHardBackendModel),
-      formatRole("builderHardFrontendModel", config.builderHardFrontendModel),
-      formatRole("executorModel", config.executorModel),
-      formatRole("architectModel", config.architectModel),
+      "Pizza models:",
+      formatRole("planner", "plannerModel", config.plannerModel),
+      formatRole("reader", "readerModel", config.readerModel),
+      formatRole("quick", "quickModel", config.quickModel),
+      formatRole("deep", "deepModel", config.deepModel),
+      formatRole("visual", "visualModel", config.visualModel),
+      formatRole("executor", "executorModel", config.executorModel),
+      formatRole("architect", "architectModel", config.architectModel),
+      "",
+      "Routes:",
+      "QUICK -> quick",
+      "READER -> reader",
+      "VISUAL -> visual",
+      "DEEP -> deep",
+      "ULTRABRAIN -> architect",
+      "WRITING -> reader",
+      "ARCHITECT -> architect",
+      "EXECUTOR -> executor",
     ].join("\n");
   }
 
@@ -90,19 +103,22 @@ export class PizzaRuntime {
 			const routed = await selectModel(config, modelLookup, context);
 			const entry: RouteEntry = {
 				timestamp: Date.now(),
+				category: routed.category,
 				label: routed.label,
 				model: `${routed.model.provider}/${routed.model.id}`,
+				reason: routed.reason,
 			};
 			this.routeHistory.push(entry);
 			if (this.routeHistory.length > 10) this.routeHistory.shift();
-			process.stderr.write(`[pizza] 🍕 Routing to ${entry.label}: ${entry.model}\n`);
+			process.stderr.write(
+				`[pizza] 🍕 ${entry.category} -> ${entry.label}: ${entry.model} (${entry.reason})\n`,
+			);
 
-      const auth = await modelLookup.getApiKeyAndHeaders(routed.model);
-      if (!auth.ok) {
-        throw new PizzaRuntimeError(auth.error);
+      if (!routed.auth.ok) {
+        throw new PizzaRuntimeError(routed.auth.error);
       }
 
-      const input = streamSimple(routed.model, context, mergeOptions(options, auth));
+      const input = streamSimple(routed.model, context, mergeOptions(options, routed.auth));
       for await (const event of input) {
         output.push(event);
       }
@@ -120,7 +136,7 @@ export class PizzaRuntime {
     return this.routeHistory
       .map(
         (r) =>
-          `[${new Date(r.timestamp).toLocaleTimeString()}] 🍕 ${r.label}: ${r.model}`,
+          `[${new Date(r.timestamp).toLocaleTimeString()}] 🍕 ${r.category} -> ${r.label}: ${r.model} (${r.reason})`,
       )
       .join("\n");
   }
@@ -155,17 +171,17 @@ function mergeOptions(
   };
 }
 
-function formatRole(role: string, model: Model<Api>): string {
-	return `${role}: ${model.provider}/${model.id}`;
+function formatRole(label: string, key: string, model: Model<Api>): string {
+	return `${label}: ${model.provider}/${model.id} (${key})`;
 }
 
 function hasConcreteModels(config: PizzaResolvedConfig): boolean {
 	return [
 		config.plannerModel,
 		config.readerModel,
-		config.builderEasyModel,
-		config.builderHardBackendModel,
-		config.builderHardFrontendModel,
+		config.quickModel,
+		config.deepModel,
+		config.visualModel,
 		config.executorModel,
 		config.architectModel,
 	].some((model) => model.provider !== "pizza");

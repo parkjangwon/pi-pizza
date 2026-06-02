@@ -43,7 +43,7 @@ describe("isPlanningRequest", () => {
 	});
 
 	describe("new format: <name>X</name> (formatSkillsForPrompt)", () => {
-		it("detects plan skill via <name> element", () => {
+		it("ignores plan skill when it only appears in available_skills", () => {
 			const ctx = makeContext("", [
 				{
 					role: "user",
@@ -57,7 +57,7 @@ describe("isPlanningRequest", () => {
 					timestamp: 0,
 				},
 			] as Message[]);
-			expect(isPlanningRequest(ctx, "")).toBe(true);
+			expect(isPlanningRequest(ctx, "")).toBe(false);
 		});
 
 		it("detects ralplan skill via <name> element", () => {
@@ -75,7 +75,7 @@ describe("isPlanningRequest", () => {
 			expect(isPlanningRequest(ctx, "")).toBe(true);
 		});
 
-		it("detects in systemPrompt with full available_skills block", () => {
+		it("ignores systemPrompt available_skills blocks", () => {
 			const ctx = makeContext(
 				`<available_skills>
   <skill>
@@ -91,7 +91,7 @@ describe("isPlanningRequest", () => {
 </available_skills>`,
 				[],
 			);
-			expect(isPlanningRequest(ctx, "")).toBe(true);
+			expect(isPlanningRequest(ctx, "")).toBe(false);
 		});
 
 		it("detects executing-plans skill via <name> element", () => {

@@ -7,33 +7,57 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { Type } from "typebox";
+import { Type, type Static } from "typebox";
 import { Compile } from "typebox/compile";
-import type { Api, Model } from "@earendil-works/pi-ai";
+import { buildCategoryModelChains } from "./config-categories.ts";
+import {
+	createUnavailableModel,
+	findModels,
+	mergeModelSpecs,
+} from "./model-selection.ts";
 import type {
 	ModelLookup,
 	PizzaConfigFile,
 	PizzaResolvedConfig,
 } from "./types.ts";
 
+const categoryModelsSchema = Type.Optional(
+	Type.Partial(
+		Type.Object({
+			QUICK: Type.Array(Type.String()),
+			READER: Type.Array(Type.String()),
+			VISUAL: Type.Array(Type.String()),
+			DEEP: Type.Array(Type.String()),
+			ULTRABRAIN: Type.Array(Type.String()),
+			WRITING: Type.Array(Type.String()),
+			ARCHITECT: Type.Array(Type.String()),
+			EXECUTOR: Type.Array(Type.String()),
+		}),
+	),
+);
 const ConfigSchema = Type.Object({
-	plannerModel: Type.String(),
-	readerModel: Type.String(),
-	builderEasyModel: Type.String(),
-	builderHardBackendModel: Type.String(),
-	builderHardFrontendModel: Type.String(),
-	executorModel: Type.String(),
-	architectModel: Type.String(),
+	plannerModel: Type.Optional(Type.String()),
+	readerModel: Type.Optional(Type.String()),
+	quickModel: Type.Optional(Type.String()),
+	deepModel: Type.Optional(Type.String()),
+	visualModel: Type.Optional(Type.String()),
+	executorModel: Type.Optional(Type.String()),
+	architectModel: Type.Optional(Type.String()),
+	builderEasyModel: Type.Optional(Type.String()),
+	builderHardBackendModel: Type.Optional(Type.String()),
+	builderHardFrontendModel: Type.Optional(Type.String()),
+	categoryModels: categoryModelsSchema,
 });
 
 const validateConfig = Compile(ConfigSchema);
+type RawConfigFile = Static<typeof ConfigSchema>;
 
 const emptyConfig: PizzaConfigFile = {
 	plannerModel: "",
 	readerModel: "",
-	builderEasyModel: "",
-	builderHardBackendModel: "",
-	builderHardFrontendModel: "",
+	quickModel: "",
+	deepModel: "",
+	visualModel: "",
 	executorModel: "",
 	architectModel: "",
 };
@@ -54,12 +78,18 @@ export function loadConfigFile(): PizzaConfigFile {
 		return emptyConfig;
 	}
 
-	const parsed: unknown = JSON.parse(readFileSync(configPath, "utf8"));
+	const configText = readFileSync(configPath, "utf8");
+	const parsed: unknown = JSON.parse(configText);
 	if (!validateConfig.Check(parsed)) {
 		return emptyConfig;
 	}
 
-	return parsed;
+	const config = canonicalizeConfigFile(parsed);
+	const canonicalText = `${JSON.stringify(config, null, 2)}\n`;
+	if (configText !== canonicalText) {
+		writeFileSync(configPath, canonicalText, "utf8");
+	}
+	return config;
 }
 
 export function deleteConfigFile(): boolean {
@@ -76,7 +106,7 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		.getAvailable()
 		.filter((model) => model.provider !== "pizza");
 	const fallback = available[0] ?? createUnavailableModel();
-	const autoPlanner = findModel(
+	const autoPlannerChain = findModels(
 		available,
 		[
 			"deepseek",
@@ -91,7 +121,8 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		["gpt-4o-mini", "llama", "flash", "deepseek-chat", "chat", "spark", "mini"],
 		fallback,
 	);
-	const autoReader = findModel(
+	const autoPlanner = autoPlannerChain[0] ?? fallback;
+	const autoReaderChain = findModels(
 		available,
 		[
 			"deepseek",
@@ -118,7 +149,8 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		],
 		autoPlanner,
 	);
-	const autoHardBackend = findModel(
+	const autoReader = autoReaderChain[0] ?? autoPlanner;
+	const autoHardBackendChain = findModels(
 		available,
 		[
 			"deepseek",
@@ -144,7 +176,8 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		],
 		autoPlanner,
 	);
-	const autoHardFrontend = findModel(
+	const autoHardBackend = autoHardBackendChain[0] ?? autoPlanner;
+	const autoHardFrontendChain = findModels(
 		available,
 		["anthropic", "openai", "openrouter", "deepseek", "google"],
 		[
@@ -158,7 +191,8 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		],
 		autoHardBackend,
 	);
-	const autoExecutor = findModel(
+	const autoHardFrontend = autoHardFrontendChain[0] ?? autoHardBackend;
+	const autoExecutorChain = findModels(
 		available,
 		[
 			"groq",
@@ -173,7 +207,8 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		["fast", "gpt-4o-mini", "llama", "deepseek-chat", "chat", "flash"],
 		autoPlanner,
 	);
-	const autoArchitect = findModel(
+	const autoExecutor = autoExecutorChain[0] ?? autoPlanner;
+	const autoArchitectChain = findModels(
 		available,
 		["anthropic", "openai", "deepseek", "openrouter", "google", "groq", "zai"],
 		[
@@ -190,88 +225,64 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		],
 		autoHardBackend,
 	);
+	const autoArchitect = autoArchitectChain[0] ?? autoHardBackend;
 	const file = loadConfigFile();
+	const plannerModel =
+		mergeModelSpecs(modelLookup, [file.plannerModel], [autoPlanner])[0] ??
+		autoPlanner;
+	const readerModel =
+		mergeModelSpecs(modelLookup, [file.readerModel], [autoReader])[0] ??
+		autoReader;
+	const quickModel =
+		mergeModelSpecs(modelLookup, [file.quickModel], [autoReader])[0] ?? autoReader;
+	const deepModel =
+		mergeModelSpecs(modelLookup, [file.deepModel], [autoHardBackend])[0] ?? autoHardBackend;
+	const visualModel =
+		mergeModelSpecs(modelLookup, [file.visualModel], [autoHardFrontend])[0] ?? autoHardFrontend;
+	const executorModel =
+		mergeModelSpecs(modelLookup, [file.executorModel], [autoExecutor])[0] ?? autoExecutor;
+	const architectModel =
+		mergeModelSpecs(modelLookup, [file.architectModel], [autoArchitect])[0] ?? autoArchitect;
 
 	return {
-		plannerModel: parseModelSpec(modelLookup, file.plannerModel, autoPlanner),
-		readerModel: parseModelSpec(modelLookup, file.readerModel, autoReader),
-		builderEasyModel: parseModelSpec(
+		plannerModel,
+		readerModel,
+		quickModel,
+		deepModel,
+		visualModel,
+		executorModel,
+		architectModel,
+		categoryModels: buildCategoryModelChains(
 			modelLookup,
-			file.builderEasyModel,
-			autoReader,
-		),
-		builderHardBackendModel: parseModelSpec(
-			modelLookup,
-			file.builderHardBackendModel,
-			autoHardBackend,
-		),
-		builderHardFrontendModel: parseModelSpec(
-			modelLookup,
-			file.builderHardFrontendModel,
-			autoHardFrontend,
-		),
-		executorModel: parseModelSpec(
-			modelLookup,
-			file.executorModel,
-			autoExecutor,
-		),
-		architectModel: parseModelSpec(
-			modelLookup,
-			file.architectModel,
-			autoArchitect,
+			file,
+			{
+				readerModel,
+				quickModel,
+				deepModel,
+				visualModel,
+				executorModel,
+				architectModel,
+			},
+			{
+				autoReaderChain,
+				autoHardBackendChain,
+				autoHardFrontendChain,
+				autoExecutorChain,
+				autoArchitectChain,
+			},
 		),
 	};
 }
 
-function findModel(
-	available: readonly Model<Api>[],
-	providerPreference: readonly string[],
-	idKeywords: readonly string[],
-	fallback: Model<Api>,
-): Model<Api> {
-	for (const provider of providerPreference) {
-		const match = available.find(
-			(model) =>
-				model.provider === provider &&
-				idKeywords.some((keyword) => model.id.toLowerCase().includes(keyword)),
-		);
-		if (match) return match;
-	}
-	for (const provider of providerPreference) {
-		const match = available.find((model) => model.provider === provider);
-		if (match) return match;
-	}
-	return fallback;
-}
-
-function parseModelSpec(
-	modelLookup: ModelLookup,
-	modelSpec: string,
-	fallback: Model<Api>,
-): Model<Api> {
-	const slashIndex = modelSpec.indexOf("/");
-	if (slashIndex <= 0 || slashIndex === modelSpec.length - 1) {
-		return fallback;
-	}
-	return (
-		modelLookup.find(
-			modelSpec.slice(0, slashIndex),
-			modelSpec.slice(slashIndex + 1),
-		) ?? fallback
-	);
-}
-
-function createUnavailableModel(): Model<Api> {
+function canonicalizeConfigFile(raw: RawConfigFile): PizzaConfigFile {
 	return {
-		id: "unavailable",
-		name: "Unavailable",
-		api: "openai-completions",
-		provider: "pizza",
-		baseUrl: "https://invalid.local",
-		reasoning: false,
-		input: ["text"],
-		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-		contextWindow: 128000,
-		maxTokens: 4096,
+		plannerModel: raw.plannerModel ?? "",
+		readerModel: raw.readerModel ?? "",
+		quickModel: raw.quickModel ?? raw.builderEasyModel ?? "",
+		deepModel: raw.deepModel ?? raw.builderHardBackendModel ?? "",
+		visualModel: raw.visualModel ?? raw.builderHardFrontendModel ?? "",
+		executorModel: raw.executorModel ?? "",
+		architectModel: raw.architectModel ?? "",
+		...(raw.categoryModels ? { categoryModels: raw.categoryModels } : {}),
 	};
 }
