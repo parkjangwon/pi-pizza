@@ -6,7 +6,13 @@ const PIZZA_PROVIDER = "pizza";
 const PIZZA_MODEL = "auto";
 
 export function hasExplicitModelSelection(argv: readonly string[] = process.argv): boolean {
-  return argv.includes("--model") || argv.includes("--provider");
+  return argv.some(
+    (arg) =>
+      arg === "--model" ||
+      arg.startsWith("--model=") ||
+      arg === "--provider" ||
+      arg.startsWith("--provider="),
+  );
 }
 
 export function ensurePizzaDefaultSettings(): boolean {

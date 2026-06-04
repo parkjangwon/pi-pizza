@@ -33,11 +33,16 @@ export default function (pi: ExtensionAPI): void {
 	});
 
 	pi.registerCommand("pizza-route", {
-		description: "Show the last routing decision(s)",
-		handler: async (_args, ctx) => {
+		description: "Show recent routing decisions, or dry-run a prompt when arguments are provided",
+		handler: async (args, ctx) => {
 			runtime.bind(ctx.modelRegistry);
-			const info = runtime.getLastRoute();
-			ctx.ui.notify(info, "info");
+			const prompt = args.trim();
+			try {
+				const info = prompt ? await runtime.previewRoute(prompt) : runtime.getLastRoute();
+				ctx.ui.notify(info, "info");
+			} catch (error) {
+				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+			}
 		},
 	});
 
@@ -62,10 +67,12 @@ export default function (pi: ExtensionAPI): void {
 				return;
 			}
 			const deleted = deleteConfigFile();
+			runtime.bind(ctx.modelRegistry);
+			runtime.reloadConfig();
 			ctx.ui.notify(
 				deleted
-					? `Deleted ${configPath}`
-					: `No config file found at ${configPath}`,
+					? `Deleted ${configPath} and reloaded pi-pizza config`
+					: `No config file found at ${configPath}; pi-pizza config reloaded`,
 				"info",
 			);
 		},

@@ -136,7 +136,7 @@ You can leave every role blank and let pi-pizza choose from authenticated models
 | `ARCHITECT` | `architectModel` | Explicit planning/design mode. |
 | `EXECUTOR` | `executorModel` | Tool-result follow-up and command-output diagnosis. |
 
-Each category uses an ordered chain. For example, `VISUAL` first tries `categoryModels.VISUAL`, then `visualModel`, then auto-detected frontend/backend-capable fallbacks.
+Each category uses an ordered chain. For example, `VISUAL` first tries `categoryModels.VISUAL`, then `visualModel`, then auto-detected frontend/backend-capable fallbacks. If a candidate lacks auth, pi-pizza skips it and includes the skipped model/reason in `/pizza-route` and stderr routing output. If the final selected model still lacks auth, dry-run output marks that route with `would fail auth` before you spend a real turn on it.
 
 Clear routing signals such as CSS/UI, README/docs, typo fixes, analysis requests, and architecture keywords are handled by local heuristics before calling `plannerModel`. Ambiguous requests still use `plannerModel`, and category auth checks are cached briefly to avoid repeated provider probing.
 
@@ -186,8 +186,9 @@ Only models already known to `pi` and configured with auth can be selected autom
 ## Commands
 
 - `/pizza` shows whether the extension is active and where the config lives.
+- `/pizza-route` shows recent routing decisions. Pass text to dry-run routing without streaming a final model response, for example `/pizza-route Polish this React layout`. Ambiguous dry-runs may still call `plannerModel` to classify the request.
 - `/pizza-models` shows the resolved concrete model for each Pizza role.
-- `/pizza-reset` asks for confirmation, then deletes `~/.pi/agent/pizza.json`.
+- `/pizza-reset` asks for confirmation, deletes `~/.pi/agent/pizza.json`, and reloads the config in the current session.
 - `/pizza-header-reset` restores the built-in `pi` startup header for the current session.
 
 ## Development

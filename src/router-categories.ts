@@ -5,6 +5,7 @@ import type {
 	PizzaModelAuth,
 	PizzaResolvedConfig,
 	RoutedModel,
+	PizzaSkippedModel,
 } from "./types.ts";
 
 const AUTH_CACHE_TTL_MS = 30_000;
@@ -33,6 +34,7 @@ export async function routeForCategory(
 		category,
 		reason,
 		auth: routed.auth,
+		skippedModels: routed.skippedModels,
 	};
 }
 
@@ -87,17 +89,30 @@ async function firstAuthenticatedModel(
 	modelLookup: ModelLookup,
 	candidates: readonly Model<Api>[],
 	fallback: Model<Api>,
-): Promise<{ readonly model: Model<Api>; readonly auth: PizzaModelAuth }> {
+): Promise<{
+	readonly model: Model<Api>;
+	readonly auth: PizzaModelAuth;
+	readonly skippedModels: readonly PizzaSkippedModel[];
+}> {
 	let firstFailure:
 		| { readonly model: Model<Api>; readonly auth: PizzaModelAuth }
 		| undefined;
+	const skippedModels: PizzaSkippedModel[] = [];
 	for (const candidate of candidates) {
 		const auth = await getCachedAuth(modelLookup, candidate);
-		if (auth.ok) return { model: candidate, auth };
+		if (auth.ok) return { model: candidate, auth, skippedModels };
+		skippedModels.push({
+			model: `${candidate.provider}/${candidate.id}`,
+			reason: auth.error,
+		});
 		firstFailure ??= { model: candidate, auth };
 	}
-	if (firstFailure) return firstFailure;
-	return { model: fallback, auth: await getCachedAuth(modelLookup, fallback) };
+	if (firstFailure) return { ...firstFailure, skippedModels };
+	return {
+		model: fallback,
+		auth: await getCachedAuth(modelLookup, fallback),
+		skippedModels,
+	};
 }
 
 async function getCachedAuth(

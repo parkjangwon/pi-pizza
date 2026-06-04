@@ -172,7 +172,7 @@ describe("selectModel category routing", () => {
 		expect(completeSimpleMock).not.toHaveBeenCalled();
 	});
 
-	it("falls through a category model chain when the first model lacks auth", async () => {
+	it("falls through a category model chain when the first model lacks auth and records the skipped candidate", async () => {
 		mockPlannerDecision("VISUAL");
 		const fallbackVisual = model("fallback", "visual");
 		const chainedConfig: PizzaResolvedConfig = {
@@ -191,6 +191,12 @@ describe("selectModel category routing", () => {
 
 		expect(routed.model).toBe(fallbackVisual);
 		expect(routed.label).toBe("CodeBuilder [Visual]");
+		expect(routed.skippedModels).toEqual([
+			{
+				model: "frontend/visual",
+				reason: "planner auth failed",
+			},
+		]);
 	});
 
 	it("caches category auth checks across repeated routes", async () => {

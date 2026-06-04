@@ -56,6 +56,12 @@ export interface RoutedModel {
 	readonly category: PizzaCategory;
 	readonly reason: string;
 	readonly auth: PizzaModelAuth;
+	readonly skippedModels: readonly PizzaSkippedModel[];
+}
+
+export interface PizzaSkippedModel {
+	readonly model: string;
+	readonly reason: string;
 }
 
 export type PizzaModelAuth =
