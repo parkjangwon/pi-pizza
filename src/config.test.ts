@@ -138,4 +138,29 @@ describe("resolveConfig category model chains", () => {
 			).slice(0, 3),
 		).toEqual(["visual/first", "visual/second", "frontend/primary"]);
 	});
+
+	it("prefers deepseek-v4-flash for quickModel auto-detection over reader-style models", () => {
+		const available = [
+			model("google", "gemini-3.5-flash"),
+			model("deepseek", "deepseek-v4-flash"),
+			model("deepseek", "deepseek-v4-pro"),
+		];
+		const lookup: ModelLookup = {
+			getAvailable: () => available,
+			find: (provider, id) =>
+				available.find(
+					(candidate) => candidate.provider === provider && candidate.id === id,
+				),
+			getApiKeyAndHeaders: async () => ({ ok: true, apiKey: "test-key" }),
+		};
+
+		const config = resolveConfig(lookup);
+
+		expect(`${config.quickModel.provider}/${config.quickModel.id}`).toBe(
+			"deepseek/deepseek-v4-flash",
+		);
+		expect(`${config.readerModel.provider}/${config.readerModel.id}`).toBe(
+			"google/gemini-3.5-flash",
+		);
+	});
 });

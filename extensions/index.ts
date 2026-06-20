@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { deleteConfigFile, getConfigPath } from "../src/config.ts";
 import { registerMascot } from "../src/mascot.ts";
+import { clearCategoryDecisionCache } from "../src/router-decision.ts";
 import { PizzaRuntime } from "../src/runtime.ts";
 import {
 	ensurePizzaDefaultSettings,
@@ -14,6 +15,7 @@ export default function (pi: ExtensionAPI): void {
 	registerMascot(pi);
 
 	pi.on("session_start", (_event, ctx) => {
+		clearCategoryDecisionCache();
 		runtime.bind(ctx.modelRegistry);
 		ensurePizzaDefaultSettings();
 		if (!hasExplicitModelSelection() && ctx.model?.provider !== "pizza") {

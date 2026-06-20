@@ -17,7 +17,7 @@ The package keeps `pi` itself unmodified. Install it as an extension package, th
 - Prints routing decisions to stderr, for example:
 
 ```text
-[pizza] 🍕 VISUAL -> CodeBuilder [Visual]: anthropic/claude-sonnet-4-5 (Heuristic frontend keyword match.)
+[pizza] 🍕 VISUAL -> CodeBuilder [Visual]: anthropic/claude-sonnet-4-6 (Heuristic frontend keyword match.)
 ```
 
 ## Install
@@ -49,7 +49,7 @@ pi -e .
 
 ## Default Model Behavior
 
-After the extension first loads, it writes these global defaults to `~/.pi/agent/settings.json`:
+After the extension first loads, it writes these global defaults to `~/.pi/agent/settings.json` when `defaultProvider` or `defaultModel` is not set yet:
 
 ```json
 {
@@ -58,12 +58,12 @@ After the extension first loads, it writes these global defaults to `~/.pi/agent
 }
 ```
 
-That means plain `pi` will use `pizza/auto` on later runs.
+That means plain `pi` will use `pizza/auto` on later runs. If you already have a default provider/model configured, pi-pizza leaves it unchanged.
 
 To bypass Pizza for a single run, pass a model explicitly:
 
 ```bash
-pi --model anthropic/claude-sonnet-4-5
+pi --model anthropic/claude-sonnet-4-6
 ```
 
 ## Configuration
@@ -92,16 +92,16 @@ For more control, add an optional `categoryModels` object. These are category-sp
 {
   "categoryModels": {
     "VISUAL": [
-      "google/gemini-2.5-pro",
-      "anthropic/claude-sonnet-4-5"
+      "google/gemini-3.5-flash",
+      "anthropic/claude-sonnet-4-6"
     ],
     "DEEP": [
-      "openai/gpt-5.2-codex",
-      "anthropic/claude-sonnet-4-5"
+      "openai/gpt-5.3-codex",
+      "anthropic/claude-sonnet-4-6"
     ],
     "QUICK": [
-      "openai/gpt-5-mini",
-      "deepseek/deepseek-chat"
+      "openai/gpt-5.4-mini",
+      "deepseek/deepseek-v4-flash"
     ]
   }
 }
@@ -118,10 +118,10 @@ You can leave every role blank and let pi-pizza choose from authenticated models
 | `plannerModel` | Classifies the current user request into a routing category. Falls back to local heuristics if auth is unavailable. | Fast, cheap, reliable instruction-following model. Use a mini/chat model. |
 | `readerModel` | Handles repository analysis, summaries, explanations, and writing-oriented turns. | Cheap long-context model. Gemini Flash-style models are a good fit. |
 | `quickModel` | Handles `QUICK`: simple edits, small commands, light explanations, and routine tasks. | Low-cost fast model. Prefer cheap coding-capable chat models. |
-| `deepModel` | Handles `DEEP`: complex backend logic, debugging, TypeScript errors, scripts, tests, and system refactors. | Strong coding/reasoning model. Prefer Sonnet/GPT/Codex/DeepSeek-style reasoning models. |
+| `deepModel` | Handles `DEEP`: complex backend logic, debugging, TypeScript errors, scripts, tests, and system refactors. | Strong coding/reasoning model. Prefer Sonnet/GPT/Codex or `deepseek-v4-pro`. |
 | `visualModel` | Handles `VISUAL`: UI component structure, CSS/layout details, and visual frontend work. | Strong frontend-writing model. Claude Sonnet-style models are a good fit. |
 | `executorModel` | Handles `EXECUTOR`: post-tool execution turns and command-output diagnosis. | Very low-latency model. Prefer fast chat models that are good at concise debugging. |
-| `architectModel` | Handles `ARCHITECT` and `ULTRABRAIN`: planning, architecture design, algorithms, and high-risk reasoning. Activated directly on `/plan`, `/skill:plan`, `/skill:ralplan`, `/skill:writing-plans`, or `/skill:executing-plans`. | Strongest reasoning model available. Prefer Opus/Sonnet/GPT-5/DeepSeek-Coder — anything with top-tier reasoning for complex design decisions. |
+| `architectModel` | Handles `ARCHITECT` and `ULTRABRAIN`: planning, architecture design, algorithms, and high-risk reasoning. Activated directly on `/plan`, `/skill:plan`, `/skill:ralplan`, `/skill:writing-plans`, or `/skill:executing-plans`. | Strongest reasoning model available. Prefer Opus 4.8, Sonnet 4.6, GPT-5.5, or `deepseek-v4-pro` for complex design decisions. |
 
 ### Routing Categories
 
@@ -142,16 +142,16 @@ Clear routing signals such as CSS/UI, README/docs, typo fixes, analysis requests
 
 ### Model Suggestions
 
-Use model IDs that appear in your own `pi --list-models` output. Exact model IDs change over time, so treat these as examples:
+Use model IDs that appear in your own `pi --list-models` output. Exact model IDs change over time, so treat these as examples. DeepSeek currently offers `deepseek-v4-flash` and `deepseek-v4-pro` only.
 
 | Goal | Example choices |
 | --- | --- |
-| Best quality | `anthropic/claude-sonnet-4-5`, `openai/gpt-5.2`, `openai/gpt-5.2-codex` |
-| Cost-effective general routing | `deepseek/deepseek-chat`, `openai/gpt-5-mini`, `google/gemini-2.5-flash` |
-| Long-context reading | `google/gemini-2.5-flash`, `google/gemini-2.5-pro` |
-| Backend-heavy coding | `anthropic/claude-sonnet-4-5`, `openai/gpt-5.2-codex`, `deepseek/deepseek-coder` |
-| Frontend-heavy coding | `anthropic/claude-sonnet-4-5`, `google/gemini-2.5-pro`, `openai/gpt-5.2` |
-| Fast execution diagnosis | `groq/*`, `deepseek/deepseek-chat`, `openai/gpt-5-nano` |
+| Best quality | `anthropic/claude-opus-4-8`, `anthropic/claude-sonnet-4-6`, `openai/gpt-5.5`, `openai/gpt-5.3-codex` |
+| Cost-effective general routing | `deepseek/deepseek-v4-flash`, `openai/gpt-5.4-mini`, `google/gemini-3.5-flash` |
+| Long-context reading | `google/gemini-3.5-flash` |
+| Backend-heavy coding | `anthropic/claude-sonnet-4-6`, `openai/gpt-5.3-codex`, `deepseek/deepseek-v4-pro` |
+| Frontend-heavy coding | `anthropic/claude-sonnet-4-6`, `google/gemini-3.5-flash`, `openai/gpt-5.5` |
+| Fast execution diagnosis | `groq/*`, `deepseek/deepseek-v4-flash`, `openai/gpt-5.4-nano` |
 
 The safest starting point is to set only the architect/deep/visual roles and leave the cheap/fast roles blank:
 
@@ -160,10 +160,10 @@ The safest starting point is to set only the architect/deep/visual roles and lea
   "plannerModel": "",
   "readerModel": "",
   "quickModel": "",
-  "deepModel": "anthropic/claude-sonnet-4-5",
-  "visualModel": "anthropic/claude-sonnet-4-5",
+  "deepModel": "anthropic/claude-sonnet-4-6",
+  "visualModel": "anthropic/claude-sonnet-4-6",
   "executorModel": "",
-  "architectModel": "anthropic/claude-sonnet-4-5"
+  "architectModel": "anthropic/claude-opus-4-8"
 }
 ```
 
@@ -171,13 +171,13 @@ Example:
 
 ```json
 {
-  "plannerModel": "deepseek/deepseek-chat",
-  "readerModel": "google/gemini-2.0-flash",
-  "quickModel": "opencode-go/deepseek-v4-pro",
-  "deepModel": "anthropic/claude-sonnet-4-5",
-  "visualModel": "anthropic/claude-sonnet-4-5",
+  "plannerModel": "deepseek/deepseek-v4-flash",
+  "readerModel": "google/gemini-3.5-flash",
+  "quickModel": "deepseek/deepseek-v4-flash",
+  "deepModel": "anthropic/claude-sonnet-4-6",
+  "visualModel": "anthropic/claude-sonnet-4-6",
   "executorModel": "groq/llama-3.3-70b-versatile",
-  "architectModel": "anthropic/claude-sonnet-4-5"
+  "architectModel": "anthropic/claude-opus-4-8"
 }
 ```
 
@@ -187,7 +187,7 @@ Only models already known to `pi` and configured with auth can be selected autom
 
 - `/pizza` shows whether the extension is active and where the config lives.
 - `/pizza-route` shows recent routing decisions. Pass text to dry-run routing without streaming a final model response, for example `/pizza-route Polish this React layout`. Ambiguous dry-runs may still call `plannerModel` to classify the request.
-- `/pizza-models` shows the resolved concrete model for each Pizza role.
+- `/pizza-models` shows the resolved concrete model for each Pizza role and the category fallback chains.
 - `/pizza-reset` asks for confirmation, deletes `~/.pi/agent/pizza.json`, and reloads the config in the current session.
 - `/pizza-header-reset` restores the built-in `pi` startup header for the current session.
 

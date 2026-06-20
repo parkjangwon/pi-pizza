@@ -16,6 +16,7 @@ export interface ResolvedRoleModels {
 }
 
 export interface AutoModelChains {
+	readonly autoQuickChain: readonly Model<Api>[];
 	readonly autoReaderChain: readonly Model<Api>[];
 	readonly autoHardBackendChain: readonly Model<Api>[];
 	readonly autoHardFrontendChain: readonly Model<Api>[];
@@ -32,7 +33,7 @@ export function buildCategoryModelChains(
 	return {
 		QUICK: mergeModelSpecs(modelLookup, file.categoryModels?.QUICK, [
 			roles.quickModel,
-			...auto.autoReaderChain,
+			...auto.autoQuickChain,
 		]),
 		READER: mergeModelSpecs(modelLookup, file.categoryModels?.READER, [
 			roles.readerModel,

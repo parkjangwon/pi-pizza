@@ -19,8 +19,8 @@ function model(provider: string, id: string): Model<Api> {
 	};
 }
 
-const quickModel = model("deepseek", "deepseek-chat");
-const visualModel = model("anthropic", "claude-sonnet-4-5");
+const quickModel = model("deepseek", "deepseek-v4-flash");
+const visualModel = model("anthropic", "claude-sonnet-4-6");
 
 function lookup(authOk = true): ModelLookup {
 	const available = [quickModel, visualModel];
@@ -47,7 +47,7 @@ describe("PizzaRuntime route preview", () => {
 
 		const preview = await runtime.previewRoute("Polish this React layout and CSS.");
 
-		expect(preview).toContain("🍕 VISUAL -> CodeBuilder [Visual]: anthropic/claude-sonnet-4-5");
+		expect(preview).toContain("🍕 VISUAL -> CodeBuilder [Visual]: anthropic/claude-sonnet-4-6");
 		expect(preview).toContain("Heuristic frontend keyword match.");
 		expect(runtime.getRouteHistory()).toEqual([]);
 	});
@@ -58,9 +58,23 @@ describe("PizzaRuntime route preview", () => {
 
 		const preview = await runtime.previewRoute("Polish this React layout and CSS.");
 
-		expect(preview).toContain("anthropic/claude-sonnet-4-5");
+		expect(preview).toContain("anthropic/claude-sonnet-4-6");
 		expect(preview).toContain("would fail auth: missing test auth");
-		expect(preview).not.toContain("skipped anthropic/claude-sonnet-4-5");
+		expect(preview).not.toContain("skipped anthropic/claude-sonnet-4-6");
+	});
+
+	it("shows resolved role models and category chains", () => {
+		const runtime = new PizzaRuntime();
+		runtime.bind(lookup());
+
+		const description = runtime.describeModels();
+
+		expect(description).toContain("Pizza models:");
+		expect(description).toContain("Category chains:");
+		expect(description).toContain("QUICK:");
+		expect(description).toContain("deepseek/deepseek-v4-flash");
+		expect(description).toContain("VISUAL:");
+		expect(description).toContain("anthropic/claude-sonnet-4-6");
 	});
 
 	it("reloads config after an explicit reset without requiring a new session", () => {

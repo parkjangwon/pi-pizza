@@ -118,13 +118,52 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 			"zai",
 			"google",
 		],
-		["gpt-4o-mini", "llama", "flash", "deepseek-chat", "chat", "spark", "mini"],
+		[
+			"v4-flash",
+			"gpt-5.4-mini",
+			"gpt-5-mini",
+			"gemini-3.5-flash",
+			"flash",
+			"llama",
+			"mini",
+			"nano",
+			"chat",
+		],
 		fallback,
 	);
 	const autoPlanner = autoPlannerChain[0] ?? fallback;
+	const autoQuickChain = findModels(
+		available,
+		[
+			"groq",
+			"deepseek",
+			"openai",
+			"openrouter",
+			"google",
+			"zai",
+			"minimax",
+			"minimax-cn",
+		],
+		[
+			"v4-flash",
+			"gpt-5.4-mini",
+			"gpt-5.4-nano",
+			"gpt-5-mini",
+			"gemini-3.5-flash",
+			"flash",
+			"llama",
+			"mini",
+			"nano",
+		],
+		autoPlanner,
+	);
+	const autoQuick = autoQuickChain[0] ?? autoPlanner;
 	const autoReaderChain = findModels(
 		available,
 		[
+			"google",
+			"openai",
+			"openrouter",
 			"deepseek",
 			"opencode-go",
 			"opencode",
@@ -132,20 +171,16 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 			"minimax",
 			"minimax-cn",
 			"groq",
-			"openai",
-			"openrouter",
-			"google",
 		],
 		[
-			"gpt-4o-mini",
-			"llama",
+			"gemini-3.5-flash",
+			"gemini-3.1-pro",
+			"gemini-3-flash",
+			"v4-flash",
 			"flash",
-			"deepseek-chat",
-			"chat",
 			"lite",
-			"spark",
+			"gpt-5.4-mini",
 			"mini",
-			"gemini-2.0-flash",
 		],
 		autoPlanner,
 	);
@@ -164,15 +199,16 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 			"google",
 		],
 		[
-			"deepseek-coder",
+			"v4-pro",
+			"gpt-5.3-codex",
+			"gpt-5.5",
+			"sonnet-4.6",
+			"sonnet-4",
+			"sonnet",
 			"coder",
 			"r1",
 			"reasoning",
-			"sonnet",
-			"claude-3-5",
 			"grok-4",
-			"grok-2",
-			"gpt-4o",
 		],
 		autoPlanner,
 	);
@@ -181,13 +217,15 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		available,
 		["anthropic", "openai", "openrouter", "deepseek", "google"],
 		[
+			"sonnet-4.6",
+			"sonnet-4",
 			"sonnet",
-			"claude-3-5",
-			"gpt-4o",
-			"deepseek-coder",
+			"gpt-5.5",
+			"gpt-5.3-codex",
+			"v4-pro",
+			"gemini-3.1-pro",
+			"gemini-3.5-flash",
 			"coder",
-			"pro",
-			"gemini-2.0-pro",
 		],
 		autoHardBackend,
 	);
@@ -204,7 +242,17 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 			"minimax-cn",
 			"google",
 		],
-		["fast", "gpt-4o-mini", "llama", "deepseek-chat", "chat", "flash"],
+		[
+			"v4-flash",
+			"gpt-5.4-nano",
+			"gpt-5.4-mini",
+			"gemini-3.5-flash",
+			"flash",
+			"fast",
+			"llama",
+			"mini",
+			"nano",
+		],
 		autoPlanner,
 	);
 	const autoExecutor = autoExecutorChain[0] ?? autoPlanner;
@@ -212,13 +260,16 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		available,
 		["anthropic", "openai", "deepseek", "openrouter", "google", "groq", "zai"],
 		[
-			"sonnet",
+			"opus-4.8",
+			"opus-4",
 			"opus",
-			"claude-3-5",
-			"gpt-4o",
-			"gpt-5",
-			"deepseek-coder",
-			"coder",
+			"gpt-5.5-pro",
+			"gpt-5.5",
+			"sonnet-4.6",
+			"sonnet-4",
+			"sonnet",
+			"v4-pro",
+			"gpt-5.3-codex",
 			"r1",
 			"reasoning",
 			"grok-4",
@@ -234,7 +285,7 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 		mergeModelSpecs(modelLookup, [file.readerModel], [autoReader])[0] ??
 		autoReader;
 	const quickModel =
-		mergeModelSpecs(modelLookup, [file.quickModel], [autoReader])[0] ?? autoReader;
+		mergeModelSpecs(modelLookup, [file.quickModel], [autoQuick])[0] ?? autoQuick;
 	const deepModel =
 		mergeModelSpecs(modelLookup, [file.deepModel], [autoHardBackend])[0] ?? autoHardBackend;
 	const visualModel =
@@ -264,6 +315,7 @@ export function resolveConfig(modelLookup: ModelLookup): PizzaResolvedConfig {
 				architectModel,
 			},
 			{
+				autoQuickChain,
 				autoReaderChain,
 				autoHardBackendChain,
 				autoHardFrontendChain,

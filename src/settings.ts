@@ -18,7 +18,7 @@ export function hasExplicitModelSelection(argv: readonly string[] = process.argv
 export function ensurePizzaDefaultSettings(): boolean {
   const settingsPath = join(homedir(), ".pi", "agent", "settings.json");
   const current = readSettings(settingsPath);
-  if (current["defaultProvider"] === PIZZA_PROVIDER && current["defaultModel"] === PIZZA_MODEL) {
+  if (hasDefaultModelSelection(current)) {
     return false;
   }
 
@@ -30,6 +30,15 @@ export function ensurePizzaDefaultSettings(): boolean {
   mkdirSync(dirname(settingsPath), { recursive: true });
   writeFileSync(settingsPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
   return true;
+}
+
+function hasDefaultModelSelection(settings: Record<string, unknown>): boolean {
+  return (
+    typeof settings["defaultProvider"] === "string" &&
+    settings["defaultProvider"].length > 0 &&
+    typeof settings["defaultModel"] === "string" &&
+    settings["defaultModel"].length > 0
+  );
 }
 
 function readSettings(settingsPath: string): Record<string, unknown> {

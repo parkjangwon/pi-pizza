@@ -14,6 +14,17 @@ import { PizzaRuntimeError } from "./errors.ts";
 import { selectModel } from "./router.ts";
 import type { ModelLookup, PizzaCategory, PizzaResolvedConfig } from "./types.ts";
 
+const CATEGORY_ORDER: readonly PizzaCategory[] = [
+	"QUICK",
+	"READER",
+	"VISUAL",
+	"DEEP",
+	"ULTRABRAIN",
+	"WRITING",
+	"ARCHITECT",
+	"EXECUTOR",
+];
+
 export interface RouteEntry {
 	readonly timestamp: number;
 	readonly category: PizzaCategory;
@@ -68,7 +79,7 @@ export class PizzaRuntime {
 
 	describeModels(): string {
 		const config = this.requireConfig();
-		return [
+		const lines = [
 			"Pizza models:",
 			formatRole("planner", "plannerModel", config.plannerModel),
 			formatRole("reader", "readerModel", config.readerModel),
@@ -77,6 +88,18 @@ export class PizzaRuntime {
 			formatRole("visual", "visualModel", config.visualModel),
 			formatRole("executor", "executorModel", config.executorModel),
 			formatRole("architect", "architectModel", config.architectModel),
+			"",
+			"Category chains:",
+		];
+
+		for (const category of CATEGORY_ORDER) {
+			const chain = config.categoryModels[category]
+				.map((candidate) => `${candidate.provider}/${candidate.id}`)
+				.join(" -> ");
+			lines.push(`${category}: ${chain}`);
+		}
+
+		lines.push(
 			"",
 			"Routes:",
 			"QUICK -> quick",
@@ -87,7 +110,9 @@ export class PizzaRuntime {
 			"WRITING -> reader",
 			"ARCHITECT -> architect",
 			"EXECUTOR -> executor",
-		].join("\n");
+		);
+
+		return lines.join("\n");
 	}
 
 	async previewRoute(prompt: string): Promise<string> {

@@ -12,11 +12,15 @@ import type {
 	PizzaResolvedConfig,
 } from "./types.ts";
 
-let lastClassifiedPrompt = "";
+let lastClassificationKey = "";
 let lastDecision: PizzaDecision | undefined;
 
 export function clearCategoryDecisionCacheForTesting(): void {
-	lastClassifiedPrompt = "";
+	clearCategoryDecisionCache();
+}
+
+export function clearCategoryDecisionCache(): void {
+	lastClassificationKey = "";
 	lastDecision = undefined;
 }
 
@@ -45,7 +49,7 @@ export async function selectCategory(
 	const heuristic = heuristicDecision(userPrompt, { allowDefault: false });
 	if (heuristic) return heuristic;
 
-	return classifyIntent(config.plannerModel, modelLookup, userPrompt);
+	return classifyIntent(config.plannerModel, modelLookup, userPrompt, context.messages.length);
 }
 
 export function isPlanningRequest(
@@ -103,8 +107,10 @@ async function classifyIntent(
 	model: Model<Api>,
 	modelLookup: ModelLookup,
 	userPrompt: string,
+	messageCount: number,
 ): Promise<PizzaDecision> {
-	if (lastClassifiedPrompt === userPrompt && lastDecision) {
+	const classificationKey = `${messageCount}:${userPrompt}`;
+	if (lastClassificationKey === classificationKey && lastDecision) {
 		return lastDecision;
 	}
 
@@ -136,7 +142,7 @@ async function classifyIntent(
 		.join("\n");
 	const decision = parseDecision(text);
 
-	lastClassifiedPrompt = userPrompt;
+	lastClassificationKey = classificationKey;
 	lastDecision = decision;
 	return decision;
 }

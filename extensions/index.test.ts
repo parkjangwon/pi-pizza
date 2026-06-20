@@ -30,24 +30,38 @@ vi.mock("../src/runtime.ts", () => ({
 vi.mock("../src/config.ts", () => configMocks);
 vi.mock("../src/settings.ts", () => settingsMocks);
 vi.mock("../src/mascot.ts", () => ({ registerMascot: vi.fn() }));
+vi.mock("../src/router-decision.ts", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../src/router-decision.ts")>();
+	return {
+		...actual,
+		clearCategoryDecisionCache: vi.fn(actual.clearCategoryDecisionCache),
+	};
+});
+
+const { clearCategoryDecisionCache } = await import("../src/router-decision.ts");
 
 const extensionModule = await import("./index.ts");
 const registerPizzaExtension = extensionModule.default;
 
 type CommandHandler = (args: string, ctx: any) => Promise<void>;
 
+type SessionStartHandler = (event: unknown, ctx: any) => void | Promise<void>;
+
 function createPiHarness() {
 	const commands = new Map<string, CommandHandler>();
+	const listeners = new Map<string, SessionStartHandler>();
 	const pi = {
 		registerProvider: vi.fn(),
 		registerCommand: vi.fn((name: string, command: { readonly handler: CommandHandler }) => {
 			commands.set(name, command.handler);
 		}),
-		on: vi.fn(),
+		on: vi.fn((event: string, handler: SessionStartHandler) => {
+			listeners.set(event, handler);
+		}),
 		setModel: vi.fn(),
 	} as unknown as ExtensionAPI;
 	registerPizzaExtension(pi);
-	return { pi, commands };
+	return { pi, commands, listeners };
 }
 
 function createContext() {
@@ -112,5 +126,18 @@ describe("pi-pizza extension commands", () => {
 		expect(runtimeMocks.bind).toHaveBeenCalledWith(ctx.modelRegistry);
 		expect(runtimeMocks.reloadConfig).toHaveBeenCalled();
 		expect(ctx.ui.notify).toHaveBeenCalledWith("Deleted /tmp/pizza.json and reloaded pi-pizza config", "info");
+	});
+
+	it("clears planner classification cache on session_start", async () => {
+		const { listeners } = createPiHarness();
+		const ctx = {
+			modelRegistry: { find: vi.fn(() => ({ provider: "pizza", id: "auto" })) },
+			model: { provider: "anthropic", id: "claude-sonnet-4-6" },
+		};
+
+		await listeners.get("session_start")?.({}, ctx);
+
+		expect(clearCategoryDecisionCache).toHaveBeenCalled();
+		expect(runtimeMocks.bind).toHaveBeenCalledWith(ctx.modelRegistry);
 	});
 });

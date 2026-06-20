@@ -1,6 +1,6 @@
 {
   "name": "pi-pizza",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Pizza mascot and multi-provider auto-router for pi.",
   "type": "module",
   "keywords": [

@@ -223,4 +223,29 @@ describe("selectModel category routing", () => {
 
 		expect(authCalls).toBe(2);
 	});
+
+	it("reclassifies the same prompt when the message count changes", async () => {
+		mockPlannerDecision("DEEP");
+
+		await selectModel(
+			config,
+			lookup(),
+			contextFromUserPrompt("Make the routing better."),
+		);
+
+		completeSimpleMock.mockClear();
+		mockPlannerDecision("READER");
+
+		const longerContext = {
+			messages: [
+				{ role: "user", content: "Earlier context", timestamp: 0 } as Message,
+				{ role: "user", content: "Make the routing better.", timestamp: 1 } as Message,
+			],
+		} as Context;
+
+		const routed = await selectModel(config, lookup(), longerContext);
+
+		expect(routed.category).toBe("READER");
+		expect(completeSimpleMock).toHaveBeenCalledOnce();
+	});
 });
