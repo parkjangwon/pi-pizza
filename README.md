@@ -58,7 +58,7 @@ After the extension first loads, it writes these global defaults to `~/.pi/agent
 }
 ```
 
-That means plain `pi` will use `pizza/auto` on later runs. If you already have a default provider/model configured, pi-pizza leaves it unchanged.
+That means plain `pi` will use `pizza/auto` on later runs when no default model was configured yet. If you already have a default provider/model configured, pi-pizza leaves it unchanged. After you switch models in a session, pi keeps your last selection on reconnect.
 
 To bypass Pizza for a single run, pass a model explicitly:
 

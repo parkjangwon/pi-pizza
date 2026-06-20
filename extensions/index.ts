@@ -17,8 +17,12 @@ export default function (pi: ExtensionAPI): void {
 	pi.on("session_start", (_event, ctx) => {
 		clearCategoryDecisionCache();
 		runtime.bind(ctx.modelRegistry);
-		ensurePizzaDefaultSettings();
-		if (!hasExplicitModelSelection() && ctx.model?.provider !== "pizza") {
+		const appliedDefaults = ensurePizzaDefaultSettings();
+		if (
+			appliedDefaults &&
+			!hasExplicitModelSelection() &&
+			ctx.model?.provider !== "pizza"
+		) {
 			const pizzaAuto = ctx.modelRegistry.find("pizza", "auto");
 			if (pizzaAuto) {
 				void pi.setModel(pizzaAuto);

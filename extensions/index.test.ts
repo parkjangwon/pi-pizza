@@ -129,7 +129,8 @@ describe("pi-pizza extension commands", () => {
 	});
 
 	it("clears planner classification cache on session_start", async () => {
-		const { listeners } = createPiHarness();
+		const { listeners, pi } = createPiHarness();
+		settingsMocks.ensurePizzaDefaultSettings.mockReturnValue(false);
 		const ctx = {
 			modelRegistry: { find: vi.fn(() => ({ provider: "pizza", id: "auto" })) },
 			model: { provider: "anthropic", id: "claude-sonnet-4-6" },
@@ -139,5 +140,20 @@ describe("pi-pizza extension commands", () => {
 
 		expect(clearCategoryDecisionCache).toHaveBeenCalled();
 		expect(runtimeMocks.bind).toHaveBeenCalledWith(ctx.modelRegistry);
+		expect(pi.setModel).not.toHaveBeenCalled();
+	});
+
+	it("selects pizza/auto only when default settings are first applied", async () => {
+		const { listeners, pi } = createPiHarness();
+		settingsMocks.ensurePizzaDefaultSettings.mockReturnValue(true);
+		const pizzaAuto = { provider: "pizza", id: "auto" };
+		const ctx = {
+			modelRegistry: { find: vi.fn(() => pizzaAuto) },
+			model: { provider: "anthropic", id: "claude-sonnet-4-6" },
+		};
+
+		await listeners.get("session_start")?.({}, ctx);
+
+		expect(pi.setModel).toHaveBeenCalledWith(pizzaAuto);
 	});
 });
