@@ -41,11 +41,12 @@ const ConfigSchema = Type.Object({
 	quickModel: Type.Optional(Type.String()),
 	deepModel: Type.Optional(Type.String()),
 	visualModel: Type.Optional(Type.String()),
-	executorModel: Type.Optional(Type.String()),
+		executorModel: Type.Optional(Type.String()),
 	architectModel: Type.Optional(Type.String()),
 	builderEasyModel: Type.Optional(Type.String()),
 	builderHardBackendModel: Type.Optional(Type.String()),
 	builderHardFrontendModel: Type.Optional(Type.String()),
+	mascot: Type.Optional(Type.Boolean()),
 	categoryModels: categoryModelsSchema,
 });
 
@@ -60,6 +61,7 @@ const emptyConfig: PizzaConfigFile = {
 	visualModel: "",
 	executorModel: "",
 	architectModel: "",
+	mascot: true,
 };
 
 export function getConfigPath(): string {
@@ -335,6 +337,7 @@ function canonicalizeConfigFile(raw: RawConfigFile): PizzaConfigFile {
 		visualModel: raw.visualModel ?? raw.builderHardFrontendModel ?? "",
 		executorModel: raw.executorModel ?? "",
 		architectModel: raw.architectModel ?? "",
+		mascot: raw.mascot ?? true,
 		...(raw.categoryModels ? { categoryModels: raw.categoryModels } : {}),
 	};
 }

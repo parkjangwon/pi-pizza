@@ -17,6 +17,7 @@ export interface PizzaConfigFile {
 	readonly visualModel: string;
 	readonly executorModel: string;
 	readonly architectModel: string;
+	readonly mascot: boolean;
 	readonly categoryModels?: Partial<Record<PizzaCategory, readonly string[]>>;
 }
 

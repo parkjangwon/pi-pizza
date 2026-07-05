@@ -78,11 +78,14 @@ On first load, `pi-pizza` creates `~/.pi/agent/pizza.json`:
   "deepModel": "",
   "visualModel": "",
   "executorModel": "",
-  "architectModel": ""
+  "architectModel": "",
+  "mascot": true
 }
 ```
 
 Leave a field blank for auto-detection, or set a concrete `provider/model-id`.
+
+Set `"mascot": false` to hide the Pizza startup header for subsequent sessions.
 
 The seven top-level fields are role defaults. `plannerModel` decides the route, and the other roles are used when a turn lands in a matching category.
 

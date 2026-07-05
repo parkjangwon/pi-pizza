@@ -51,6 +51,7 @@ describe("resolveConfig category model chains", () => {
 			visualModel: "",
 			executorModel: "",
 			architectModel: "",
+			mascot: true,
 		});
 		expect(written).not.toHaveProperty("categoryModels");
 	});
@@ -87,10 +88,39 @@ describe("resolveConfig category model chains", () => {
 			quickModel: "easy/quick",
 			deepModel: "backend/deep",
 			visualModel: "frontend/visual",
+			mascot: true,
 		});
 		expect(written).not.toHaveProperty("builderEasyModel");
 		expect(written).not.toHaveProperty("builderHardBackendModel");
 		expect(written).not.toHaveProperty("builderHardFrontendModel");
+	});
+
+	it("preserves an explicit mascot: false setting", () => {
+		const tempHome = join(tmpdir(), `pi-pizza-${randomUUID()}`);
+		tempHomes.push(tempHome);
+		vi.stubEnv("HOME", tempHome);
+		const configPath = join(tempHome, ".pi", "agent", "pizza.json");
+		mkdirSync(join(tempHome, ".pi", "agent"), { recursive: true });
+		writeFileSync(
+			configPath,
+			JSON.stringify({
+				plannerModel: "",
+				readerModel: "",
+				quickModel: "",
+				deepModel: "",
+				visualModel: "",
+				executorModel: "",
+				architectModel: "",
+				mascot: false,
+			}),
+			"utf8",
+		);
+
+		const config = loadConfigFile();
+		const written: unknown = JSON.parse(readFileSync(configPath, "utf8"));
+
+		expect(config.mascot).toBe(false);
+		expect(written).toMatchObject({ mascot: false });
 	});
 
 	it("puts configured category models before role defaults", () => {

@@ -1,14 +1,18 @@
 import chalk from "chalk";
 import { VERSION, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
+import { loadConfigFile } from "./config.ts";
 
 export function registerMascot(pi: ExtensionAPI): void {
-  pi.on("session_start", (_event, ctx) => {
-    if (!ctx.hasUI) return;
-    ctx.ui.setHeader((_tui, theme) => ({
-      render: () => renderPizzaStartupLogo(VERSION, theme).split("\n"),
-      invalidate: () => {},
-    }));
-  });
+  const config = loadConfigFile();
+  if (config.mascot) {
+    pi.on("session_start", (_event, ctx) => {
+      if (!ctx.hasUI) return;
+      ctx.ui.setHeader((_tui, theme) => ({
+        render: () => renderPizzaStartupLogo(VERSION, theme).split("\n"),
+        invalidate: () => {},
+      }));
+    });
+  }
 
   pi.registerCommand("pizza-header-reset", {
     description: "Restore the built-in pi startup header",
